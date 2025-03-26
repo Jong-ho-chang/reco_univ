@@ -68,6 +68,16 @@ def predict_pass_probabilities(total_score, core_score, region_pref, track_pref,
     filtered_df['전과목성적'] = total_score
     filtered_df['국영수사_과'] = core_score
     
+    # 성적 기준으로 필터링
+    score_column = '전과목성적' if total_score > 0 else '국영수사_과'
+    base_score = total_score if total_score > 0 else core_score
+    filtered_df = filtered_df[
+        (filtered_df[score_column] >= base_score - 0.2) &
+        (filtered_df[score_column] <= base_score + 0.2)
+    ]
+    if filtered_df.empty:
+        filtered_df = df.copy()
+    
     # 모델 예측
     input_X = filtered_df[features]
     input_X_processed = preprocessor.transform(input_X)
@@ -138,4 +148,21 @@ if st.sidebar.button("합격 가능성 예측 및 추천"):
         if rec_df.empty:
             st.write("해당 조건에 맞는 추천 결과가 없습니다.")
         else:
-            st.write(rec_df)
+            for i, row in rec_df.iterrows():
+                percentage = row["합격확률"] * 100
+                st.markdown(f"""
+                <div style='margin-bottom: 8px;'>
+                  <strong>{row['대학명']} - {row['학과(부)']}</strong><br>
+                  <div style='width: 100%; background: #eee; border-radius: 4px;'>
+                    <div style='width: {percentage:.1f}%; 
+                                background: linear-gradient(to right, red, yellow, green); 
+                                padding: 6px 0; 
+                                text-align: center; 
+                                color: white;
+                                font-weight: bold;
+                                border-radius: 4px;'>
+                      {percentage:.1f}%
+                    </div>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
